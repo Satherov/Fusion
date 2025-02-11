@@ -6,8 +6,11 @@ import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.PackType;
+
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
 import net.neoforged.neoforgespi.language.IModInfo;
 
 import java.nio.file.Path;
@@ -29,13 +32,15 @@ public abstract class FusionModelProvider implements DataProvider {
     private final Map<ResourceLocation,ModelInstance<?>> models = new HashMap<>();
     private final String modName;
     private final PackOutput output;
+    private final ExistingFileHelper existingFileHelper;
 
     /**
      * @param modid modid of the mod which creates the generator
      */
-    public FusionModelProvider(String modid, PackOutput output){
+    public FusionModelProvider(String modid, PackOutput output, ExistingFileHelper existingFileHelper){
         this.modName = ModList.get().getModContainerById(modid).map(ModContainer::getModInfo).map(IModInfo::getDisplayName).orElse(modid);
         this.output = output;
+        this.existingFileHelper = existingFileHelper;
     }
 
     @Override
@@ -49,6 +54,7 @@ public abstract class FusionModelProvider implements DataProvider {
             ModelInstance<?> model = entry.getValue();
             String extension = location.getPath().lastIndexOf(".") > location.getPath().lastIndexOf("/") ? "" : ".json";
             Path path = Path.of("assets", location.getNamespace(), "models", location.getPath() + extension);
+            this.existingFileHelper.trackGenerated(location, new ExistingFileHelper.ResourceType(PackType.CLIENT_RESOURCES, ".json", "models"));
             tasks.add(DataProvider.saveStable(cache, FusionModelTypeRegistry.serializeModelData(model), output.resolve(path)));
         }
         return CompletableFuture.allOf(tasks.toArray(CompletableFuture[]::new));
